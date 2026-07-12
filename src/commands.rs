@@ -1,27 +1,18 @@
 use crate::utils::expand_path;
 use std::collections::HashMap;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
+use std::io;
 use std::io::Write;
 
-pub fn is_file_exists<W: Write>(path: &str, writer: &mut W) -> Result<bool, std::io::Error> {
+pub fn is_file_exists(path: &str) -> Result<bool, std::io::Error> {
     let expanded_path = expand_path(path);
-    match File::open(&expanded_path) {
-        Ok(_) => {
-            writeln!(writer, "Config file already exists: {}", expanded_path)?;
-            Ok(true)
-        }
-        Err(e) => {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                writeln!(writer, "Config file does not exist: {}", expanded_path)?;
-                Ok(false)
-            } else {
-                writeln!(writer, "Failed to check config file: {}", expanded_path)?;
-                Err(e)
-            }
-        }
+    match fs::metadata(&expanded_path) {
+        Ok(metadata) => Ok(metadata.is_file()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e),
     }
 }
-pub fn create_file<W: Write>(path: &str, writer: &mut W) -> Result<(), std::io::Error> {
+pub fn create_file(path: &str) -> Result<(bool), std::io::Error> {
     let expanded_path = expand_path(path);
     let result = OpenOptions::new()
         .write(true)
@@ -31,20 +22,16 @@ pub fn create_file<W: Write>(path: &str, writer: &mut W) -> Result<(), std::io::
     match result {
         Ok(mut file) => {
             file.write_all(b"{}")?;
-            writeln!(writer, "Created config file: {}", expanded_path)?;
         }
         Err(e) => {
-            writeln!(writer, "Failed to create config file: {}", expanded_path)?;
             return Err(e);
         }
     }
-    Ok(())
+    Ok(true)
 }
 pub fn add_shortcut<W: Write>(path: &str, alias: &str, cmd: &str, writer: &mut W) {
-    // todo: extract function    let expanded_path = expand_path(path);
     let expanded_path = expand_path(path);
     let content = fs::read_to_string(&expanded_path).expect("Failed to read config file");
-    // todo remove unwrap
     let mut shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
 
     shortcuts.insert(alias.to_string(), cmd.to_string());

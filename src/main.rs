@@ -1,3 +1,4 @@
+use std::io::Write;
 use clap::Parser;
 use mm_rust::cli::{Cli, Commands};
 use mm_rust::commands::{add_shortcut, create_file, execute_shortcut, is_file_exists, list_keys_for_completion, list_shortcuts, remove_shortcut, show_shortcut};
@@ -13,12 +14,9 @@ fn main() {
         list_keys_for_completion(resolve_config_path(true).as_str(), &mut stdout);
         return;
     }
-    let exists = is_file_exists(&path, &mut stdout).unwrap_or(false);
-    if !exists {
-        create_file(&path, &mut stdout).unwrap_or_else(|e| {
-            eprintln!("Error creating config file: {}", e);
-            std::process::exit(1);
-        });
+
+    if !is_file_exists(&path).unwrap() {
+        create_file(&path).unwrap_or_else(|_| std::process::exit(1));
     }
 
     match &cli.action {
