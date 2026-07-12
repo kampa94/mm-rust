@@ -1,8 +1,7 @@
 use crate::utils::expand_path;
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
-use std::io::{ Write};
-
+use std::io::Write;
 
 pub fn is_file_exists<W: Write>(path: &str, writer: &mut W) -> Result<bool, std::io::Error> {
     let expanded_path = expand_path(path);
@@ -22,7 +21,6 @@ pub fn is_file_exists<W: Write>(path: &str, writer: &mut W) -> Result<bool, std:
         }
     }
 }
-
 pub fn create_file<W: Write>(path: &str, writer: &mut W) -> Result<(), std::io::Error> {
     let expanded_path = expand_path(path);
     let result = OpenOptions::new()
@@ -78,7 +76,7 @@ pub fn remove_shortcut<W: Write>(path: &str, alias: &str, writer: &mut W) {
 
 pub fn list_shortcuts<W: Write>(expanded_path: &str, writer: &mut W) {
     // todo: extract function
-    let content = fs::read_to_string(&expanded_path).expect("Failed to read config file");
+    let content = fs::read_to_string(expanded_path).expect("Failed to read config file");
     let shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
 
     if shortcuts.is_empty() {
@@ -112,12 +110,12 @@ pub fn list_keys_for_completion<W: Write>(path: &str, writer: &mut W) {
     if let Ok(content) = fs::read_to_string(&expanded_path) {
         if let Ok(shortcuts) = serde_json::from_str::<HashMap<String, String>>(&content) {
             let keys: Vec<&String> = shortcuts.keys().collect();
-            let keys_str =
-                keys
-                    .into_iter()
-                    .map(|s| s.as_str())
-                    .collect::<Vec<&str>>()
-                    .join(" ") + " ";
+            let keys_str = keys
+                .into_iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<&str>>()
+                .join(" ")
+                + " ";
             write!(writer, "{}", keys_str).ok();
         }
     }
@@ -140,7 +138,7 @@ pub fn execute_shortcut<W: Write>(path: &str, args: Vec<String>, writer: &mut W)
         let status = std::process::Command::new("sh")
             .arg("-c")
             .arg(command_str)
-            .status();  // .status() esegue il comando e aspetta il risultato
+            .status(); // .status() esegue il comando e aspetta il risultato
         match status {
             Ok(s) => {
                 if !s.success() {

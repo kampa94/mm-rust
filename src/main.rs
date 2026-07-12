@@ -32,14 +32,14 @@ fn main() {
         }
         Commands::Remove { short_cmd: alias } => {
             if let Some(alias) = alias {
-                remove_shortcut(path.as_str(), &alias, &mut stdout);
+                remove_shortcut(path.as_str(), alias, &mut stdout);
             } else {
                 eprintln!("Error: alias is required for remove");
             }
         }
         Commands::Show { short_cmd } => {
             if let Some(alias) = short_cmd {
-                show_shortcut(path.as_str(), &alias, &mut stdout);
+                show_shortcut(path.as_str(), alias, &mut stdout);
             } else {
                 eprintln!("Error: short_cmd is required for show");
             }
