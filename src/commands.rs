@@ -4,7 +4,7 @@ use std::fs::{self, OpenOptions};
 use std::io;
 use std::io::Write;
 
-pub fn is_file_exists(path: &str) -> Result<bool, std::io::Error> {
+pub fn is_file_exists(path: &str) -> Result<bool, io::Error> {
     let expanded_path = expand_path(path);
     match fs::metadata(&expanded_path) {
         Ok(metadata) => Ok(metadata.is_file()),
@@ -12,7 +12,7 @@ pub fn is_file_exists(path: &str) -> Result<bool, std::io::Error> {
         Err(e) => Err(e),
     }
 }
-pub fn create_file(path: &str) -> Result<(bool), std::io::Error> {
+pub fn create_file(path: &str) -> Result<bool, io::Error> {
     let expanded_path = expand_path(path);
     let result = OpenOptions::new()
         .write(true)

@@ -1,4 +1,3 @@
-use std::io::Write;
 use clap::Parser;
 use mm_rust::cli::{Cli, Commands};
 use mm_rust::commands::{add_shortcut, create_file, execute_shortcut, is_file_exists, list_keys_for_completion, list_shortcuts, remove_shortcut, show_shortcut};
