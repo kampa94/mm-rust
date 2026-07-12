@@ -1,6 +1,6 @@
 use clap::Parser;
 use mm_rust::cli::{Cli, Commands};
-use mm_rust::commands::{add_shortcut, create_file_if_not_exists, execute_shortcut, list_keys_for_completion, list_shortcuts, remove_shortcut, show_shortcut};
+use mm_rust::commands::{add_shortcut, create_file, execute_shortcut, is_file_exists, list_keys_for_completion, list_shortcuts, remove_shortcut, show_shortcut};
 use mm_rust::utils::resolve_config_path;
 
 fn main() {
@@ -13,8 +13,13 @@ fn main() {
         list_keys_for_completion(resolve_config_path(true).as_str(), &mut stdout);
         return;
     }
-    // todo: split method
-    create_file_if_not_exists(&path, &mut stdout);
+    let exists = is_file_exists(&path, &mut stdout).unwrap_or(false);
+    if !exists {
+        create_file(&path, &mut stdout).unwrap_or_else(|e| {
+            eprintln!("Error creating config file: {}", e);
+            std::process::exit(1);
+        });
+    }
 
     match &cli.action {
         Commands::Add { short_cmd: alias, long_cmd: cmd } => {

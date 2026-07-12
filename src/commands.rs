@@ -1,18 +1,46 @@
 use crate::utils::expand_path;
 use std::collections::HashMap;
-use std::fs::{ self, File };
-use std::io::Write;
+use std::fs::{self, File, OpenOptions};
+use std::io::{ Write};
 
-pub fn create_file_if_not_exists<W: Write>(path: &str, writer: &mut W) {
+
+pub fn is_file_exists<W: Write>(path: &str, writer: &mut W) -> Result<bool, std::io::Error> {
     let expanded_path = expand_path(path);
-    if !std::path::Path::new(&expanded_path).exists() {
-        if File::create(&expanded_path).is_ok() {
-            std::fs::write(&expanded_path, "{}").ok();
-            writeln!(writer, "Created config file: {}", expanded_path).ok();
-        } else {
-            writeln!(writer, "Failed to create config file: {}", expanded_path).ok();
+    match File::open(&expanded_path) {
+        Ok(_) => {
+            writeln!(writer, "Config file already exists: {}", expanded_path)?;
+            Ok(true)
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                writeln!(writer, "Config file does not exist: {}", expanded_path)?;
+                Ok(false)
+            } else {
+                writeln!(writer, "Failed to check config file: {}", expanded_path)?;
+                Err(e)
+            }
         }
     }
+}
+
+pub fn create_file<W: Write>(path: &str, writer: &mut W) -> Result<(), std::io::Error> {
+    let expanded_path = expand_path(path);
+    let result = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&expanded_path);
+
+    match result {
+        Ok(mut file) => {
+            file.write_all(b"{}")?;
+            writeln!(writer, "Created config file: {}", expanded_path)?;
+        }
+        Err(e) => {
+            writeln!(writer, "Failed to create config file: {}", expanded_path)?;
+            return Err(e);
+        }
+    }
+    Ok(())
 }
 pub fn add_shortcut<W: Write>(path: &str, alias: &str, cmd: &str, writer: &mut W) {
     // todo: extract function    let expanded_path = expand_path(path);
