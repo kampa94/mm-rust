@@ -5,7 +5,7 @@ use clap::{Parser, Subcommand};
 #[command(propagate_version = true)]
 pub struct Cli {
     #[arg(short, long, global = false)]
-    pub is_global: bool,
+    pub global: bool,
 
     #[command(subcommand)]
     pub action: Commands,
