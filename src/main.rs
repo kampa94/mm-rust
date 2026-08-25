@@ -16,8 +16,7 @@ fn main() {
         list_keys_for_completion(resolve_config_path(true).as_str(), &mut stdout);
         return;
     }
-
-    if !is_file_exists(&path).unwrap() {
+    if !is_file_exists(&path) {
         create_file(&path).unwrap_or_else(|_| std::process::exit(1));
     }
 

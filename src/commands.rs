@@ -4,12 +4,12 @@ use std::fs::{self, OpenOptions};
 use std::io;
 use std::io::Write;
 
-pub fn is_file_exists(path: &str) -> Result<bool, io::Error> {
+pub fn is_file_exists(path: &str) ->bool {
     let expanded_path = expand_path(path);
     match fs::metadata(&expanded_path) {
-        Ok(metadata) => Ok(metadata.is_file()),
-        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
-        Err(e) => Err(e),
+        Ok(metadata) => metadata.is_file(),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => false,
+        Err(_e) => std::process::exit(1)
     }
 }
 pub fn create_file(path: &str) -> Result<bool, io::Error> {
@@ -43,7 +43,6 @@ pub fn add_shortcut<W: Write>(path: &str, alias: &str, cmd: &str, writer: &mut W
         }
     }
 }
-
 pub fn remove_shortcut<W: Write>(path: &str, alias: &str, writer: &mut W) {
     let expanded_path = expand_path(path);
     let content = fs::read_to_string(&expanded_path).expect("Failed to read config file");
@@ -60,9 +59,8 @@ pub fn remove_shortcut<W: Write>(path: &str, alias: &str, writer: &mut W) {
         writeln!(writer, "Shortcut not found: {}", alias).ok();
     }
 }
-
-pub fn list_shortcuts<W: Write>(expanded_path: &str, writer: &mut W) {
-    // todo: extract function
+pub fn list_shortcuts<W: Write>(path: &str, writer: &mut W) {
+    let expanded_path = expand_path(path);
     let content = fs::read_to_string(expanded_path).expect("Failed to read config file");
     let shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
 
@@ -80,7 +78,6 @@ pub fn list_shortcuts<W: Write>(expanded_path: &str, writer: &mut W) {
         }
     }
 }
-
 pub fn show_shortcut<W: Write>(path: &str, key: &str, writer: &mut W) {
     // todo: extract function
     let expanded_path = expand_path(path);
