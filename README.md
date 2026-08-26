@@ -18,6 +18,11 @@ cargo build --release
 
 L'eseguibile sarà disponibile in `target/release/mm`.
 
+```bash
+sudo mv target/debug/mm-rust /usr/bin/mm
+
+```
+
 ## Utilizzo
 
 ### Aggiungere uno shortcut
