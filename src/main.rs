@@ -1,7 +1,7 @@
 use clap::Parser;
 use mm_rust::cli::{Cli, Commands};
 use mm_rust::commands::{
-    add_shortcut, create_file, execute_shortcut, is_file_exists, list_keys_for_completion,
+    add_shortcut, create_file, execute_shortcut, is_file_exists,
     list_shortcuts, remove_shortcut, show_shortcut,
 };
 use mm_rust::utils::resolve_config_path;
@@ -11,11 +11,6 @@ fn main() {
     let path = resolve_config_path(cli.global);
     let mut stdout = std::io::stdout();
 
-    if let Commands::Complete = cli.action {
-        list_keys_for_completion(resolve_config_path(false).as_str(), &mut stdout);
-        list_keys_for_completion(resolve_config_path(true).as_str(), &mut stdout);
-        return;
-    }
     if !is_file_exists(&path) {
         create_file(&path).unwrap_or_else(|_| std::process::exit(1));
     }
@@ -51,9 +46,6 @@ fn main() {
         }
         Commands::External(args) => {
             execute_shortcut(path.as_str(), args.clone(), &mut stdout);
-        }
-        Commands::Complete => {
-            // Handled above
         }
     }
 }

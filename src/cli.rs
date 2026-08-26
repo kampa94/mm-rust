@@ -29,7 +29,4 @@ pub enum Commands {
 
     #[command(external_subcommand)]
     External(Vec<String>),
-
-    #[command(hide = true)]
-    Complete,
 }

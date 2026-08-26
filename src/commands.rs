@@ -89,21 +89,6 @@ pub fn show_shortcut<W: Write>(path: &str, key: &str, writer: &mut W) {
         writeln!(writer, "Shortcut not found: {}", key).ok();
     }
 }
-pub fn list_keys_for_completion<W: Write>(path: &str, writer: &mut W) {
-    let expanded_path = expand_path(path);
-    if let Ok(content) = fs::read_to_string(&expanded_path) {
-        if let Ok(shortcuts) = serde_json::from_str::<HashMap<String, String>>(&content) {
-            let keys: Vec<&String> = shortcuts.keys().collect();
-            let keys_str = keys
-                .into_iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<&str>>()
-                .join(" ")
-                + " ";
-            write!(writer, "{}", keys_str).ok();
-        }
-    }
-}
 pub fn execute_shortcut<W: Write>(path: &str, args: Vec<String>, writer: &mut W) {
     if args.is_empty() {
         return;
