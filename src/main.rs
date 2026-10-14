@@ -1,5 +1,5 @@
 use clap::Parser;
-use mm_rust::cli::{Cli, Commands};
+use mm_rust::cli::{Cli, Commands, validate_alias};
 use mm_rust::commands::{
     add_shortcut, create_file, execute_shortcut, is_file_exists,
     list_shortcuts, remove_shortcut, show_shortcut,
@@ -22,30 +22,21 @@ fn main() {
             short_cmd: alias,
             long_cmd: cmd,
         } => {
-            if let (Some(alias), Some(cmd)) = (alias, cmd) {
-                let command_string = cmd.join(" ");
-                add_shortcut(path.as_str(), alias, &command_string, &mut stdout)
-            } else {
-                eprintln!("Error: Both alias and command are required for add");
+            if cmd.is_empty() {
+                eprintln!("Error: command is required for add");
                 std::process::exit(2);
             }
+            if let Err(e) = validate_alias(alias) {
+                eprintln!("Error: {e}");
+                std::process::exit(2);
+            }
+            let command_string = cmd.join(" ");
+            add_shortcut(path.as_str(), alias, &command_string, &mut stdout)
         }
         Commands::Remove { short_cmd: alias } => {
-            if let Some(alias) = alias {
-                remove_shortcut(path.as_str(), alias, &mut stdout)
-            } else {
-                eprintln!("Error: alias is required for remove");
-                std::process::exit(2);
-            }
+            remove_shortcut(path.as_str(), alias, &mut stdout)
         }
-        Commands::Show { short_cmd } => {
-            if let Some(alias) = short_cmd {
-                show_shortcut(path.as_str(), alias, &mut stdout)
-            } else {
-                eprintln!("Error: short_cmd is required for show");
-                std::process::exit(2);
-            }
-        }
+        Commands::Show { short_cmd } => show_shortcut(path.as_str(), short_cmd, &mut stdout),
         Commands::List {} => list_shortcuts(path.as_str(), &mut stdout),
         Commands::External(args) => execute_shortcut(path.as_str(), args.clone(), &mut stdout),
     };

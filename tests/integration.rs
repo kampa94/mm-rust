@@ -1,8 +1,7 @@
 use mm_rust::commands::{
     add_shortcut, create_file, execute_shortcut, is_file_exists, list_shortcuts, remove_shortcut,
     show_shortcut,
-};
-use mm_rust::utils::{expand_path, resolve_config_path};
+};use mm_rust::utils::{expand_path, resolve_config_path};
 use std::collections::HashMap;
 use std::env;
 use std::io;
@@ -249,4 +248,68 @@ fn resolve_config_path_global_and_local() {
     assert_eq!(resolve_config_path(true), "~/.mm_global");
     let local = resolve_config_path(false);
     assert!(local.ends_with("/.mm"), "unexpected local path: {local}");
+}
+
+#[test]
+fn cli_parses_add_with_global_before_subcommand() {
+    use clap::Parser;
+    use mm_rust::cli::{Cli, Commands};
+
+    let cli = Cli::try_parse_from(["mm", "--global", "add", "b", "echo hi"]).unwrap();
+    assert!(cli.global);
+    match cli.action {
+        Commands::Add {
+            short_cmd,
+            long_cmd,
+        } => {
+            assert_eq!(short_cmd, "b");
+            assert_eq!(long_cmd, vec!["echo hi"]);
+        }
+        _ => panic!("expected Add"),
+    }
+}
+
+#[test]
+fn cli_accepts_global_after_subcommand() {
+    use clap::Parser;
+    use mm_rust::cli::{Cli, Commands};
+
+    let cli = Cli::try_parse_from(["mm", "add", "b", "echo hi", "--global"]).unwrap();
+    assert!(cli.global);
+    assert!(matches!(cli.action, Commands::Add { .. }));
+}
+
+#[test]
+fn cli_rejects_add_without_command_or_alias() {
+    use clap::Parser;
+    use mm_rust::cli::Cli;
+
+    assert!(Cli::try_parse_from(["mm", "add", "onlyalias"]).is_err());
+    assert!(Cli::try_parse_from(["mm", "add"]).is_err());
+    assert!(Cli::try_parse_from(["mm", "remove"]).is_err());
+    assert!(Cli::try_parse_from(["mm", "show"]).is_err());
+}
+
+#[test]
+fn cli_routes_unknown_name_to_external() {
+    use clap::Parser;
+    use mm_rust::cli::{Cli, Commands};
+
+    let cli = Cli::try_parse_from(["mm", "myalias"]).unwrap();
+    match cli.action {
+        Commands::External(args) => assert_eq!(args, vec!["myalias"]),
+        _ => panic!("expected External"),
+    }
+}
+
+#[test]
+fn validate_alias_rejects_reserved_and_empty() {
+    use mm_rust::cli::validate_alias;
+
+    for reserved in ["add", "remove", "show", "list", "help"] {
+        assert!(validate_alias(reserved).is_err(), "{reserved} should be reserved");
+    }
+    assert!(validate_alias("").is_err());
+    assert!(validate_alias("   ").is_err());
+    assert!(validate_alias("build").is_ok());
 }
