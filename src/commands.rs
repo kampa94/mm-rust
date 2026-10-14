@@ -103,6 +103,43 @@ pub fn show_shortcut<W: Write>(path: &str, key: &str, writer: &mut W) -> io::Res
     }
     Ok(())
 }
+
+/// Quota un singolo argomento per l'uso dentro `sh -c`.
+pub fn shell_escape(arg: &str) -> String {
+    const SAFE: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-";
+    if !arg.is_empty() && arg.bytes().all(|b| SAFE.contains(&b)) {
+        arg.to_string()
+    } else {
+        format!("'{}'", arg.replace('\'', "'\"'\"'"))
+    }
+}
+
+/// Sostituisce ogni `{{}}` nel template con gli argomenti extra in ordine.
+/// Gli argomenti in eccesso vengono accodati in coda.
+/// Ritorna il comando renderizzato e il numero di placeholder senza argomento.
+pub fn render_command(template: &str, extra: &[String]) -> (String, usize) {
+    let mut rendered = String::with_capacity(template.len());
+    let mut args = extra.iter();
+    let mut missing = 0;
+    let mut rest = template;
+    while let Some(pos) = rest.find("{{}}") {
+        rendered.push_str(&rest[..pos]);
+        match args.next() {
+            Some(arg) => rendered.push_str(&shell_escape(arg)),
+            None => {
+                rendered.push_str("{{}}");
+                missing += 1;
+            }
+        }
+        rest = &rest[pos + "{{}}".len()..];
+    }
+    rendered.push_str(rest);
+    for arg in args {
+        rendered.push(' ');
+        rendered.push_str(&shell_escape(arg));
+    }
+    (rendered, missing)
+}
 pub fn execute_shortcut<W: Write>(path: &str, args: Vec<String>, writer: &mut W) -> io::Result<()> {
     if args.is_empty() {
         return Ok(());
@@ -111,13 +148,17 @@ pub fn execute_shortcut<W: Write>(path: &str, args: Vec<String>, writer: &mut W)
     let shortcuts = load_shortcuts(path)?;
 
     // todo invert if
-    if let Some(command_str) = shortcuts.get(key) {
+    if let Some(template) = shortcuts.get(key) {
+        let (command_str, missing) = render_command(template, &args[1..]);
         writeln!(writer, "Executing: {command_str}")?;
+        if missing > 0 {
+            writeln!(writer, "Warning: {missing} placeholder(s) without argument")?;
+        }
 
         // todo current shell
         let status = std::process::Command::new("sh")
             .arg("-c")
-            .arg(command_str)
+            .arg(&command_str)
             .status()
             .map_err(|e| {
                 io::Error::new(
