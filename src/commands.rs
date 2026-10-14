@@ -29,40 +29,44 @@ pub fn create_file(path: &str) -> Result<bool, io::Error> {
     }
     Ok(true)
 }
-pub fn add_shortcut<W: Write>(path: &str, alias: &str, cmd: &str, writer: &mut W) {
+
+fn load_shortcuts(path: &str) -> HashMap<String, String> {
     let expanded_path = expand_path(path);
     let content = fs::read_to_string(&expanded_path).expect("Failed to read config file");
-    let mut shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+fn save_shortcuts(path: &str, shortcuts: &HashMap<String, String>) -> bool {
+    let expanded_path = expand_path(path);
+    match serde_json::to_string_pretty(shortcuts) {
+        Ok(json) => fs::write(&expanded_path, json).is_ok(),
+        Err(_) => false,
+    }
+}
+pub fn add_shortcut<W: Write>(path: &str, alias: &str, cmd: &str, writer: &mut W) {
+    let mut shortcuts = load_shortcuts(path);
 
     shortcuts.insert(alias.to_string(), cmd.to_string());
-    if let Ok(json) = serde_json::to_string_pretty(&shortcuts) {
-        if fs::write(&expanded_path, json).is_ok() {
-            writeln!(writer, "Added shortcut: {} -> {}", alias, cmd).ok();
-        } else {
-            writeln!(writer, "Failed to write to config file").ok();
-        }
+    if save_shortcuts(path, &shortcuts) {
+        writeln!(writer, "Added shortcut: {} -> {}", alias, cmd).ok();
+    } else {
+        writeln!(writer, "Failed to write to config file").ok();
     }
 }
 pub fn remove_shortcut<W: Write>(path: &str, alias: &str, writer: &mut W) {
-    let expanded_path = expand_path(path);
-    let content = fs::read_to_string(&expanded_path).expect("Failed to read config file");
-    let mut shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
+    let mut shortcuts = load_shortcuts(path);
     if shortcuts.remove(alias).is_some() {
-        if let Ok(json) = serde_json::to_string_pretty(&shortcuts) {
-            if fs::write(&expanded_path, json).is_ok() {
-                writeln!(writer, "Removed shortcut: {}", alias).ok();
-            } else {
-                writeln!(writer, "Failed to write to config file").ok();
-            }
+        if save_shortcuts(path, &shortcuts) {
+            writeln!(writer, "Removed shortcut: {}", alias).ok();
+        } else {
+            writeln!(writer, "Failed to write to config file").ok();
         }
     } else {
         writeln!(writer, "Shortcut not found: {}", alias).ok();
     }
 }
 pub fn list_shortcuts<W: Write>(path: &str, writer: &mut W) {
-    let expanded_path = expand_path(path);
-    let content = fs::read_to_string(expanded_path).expect("Failed to read config file");
-    let shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
+    let shortcuts = load_shortcuts(path);
 
     if shortcuts.is_empty() {
         writeln!(writer, "No shortcuts found.").ok();
@@ -79,10 +83,7 @@ pub fn list_shortcuts<W: Write>(path: &str, writer: &mut W) {
     }
 }
 pub fn show_shortcut<W: Write>(path: &str, key: &str, writer: &mut W) {
-    // todo: extract function
-    let expanded_path = expand_path(path);
-    let content = fs::read_to_string(&expanded_path).expect("Failed to read config file");
-    let shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
+    let shortcuts = load_shortcuts(path);
     if let Some(value) = shortcuts.get(key) {
         writeln!(writer, "{}", value).ok();
     } else {
@@ -94,10 +95,7 @@ pub fn execute_shortcut<W: Write>(path: &str, args: Vec<String>, writer: &mut W)
         return;
     }
     let key = &args[0];
-    // todo: extract function
-    let expanded_path = expand_path(path);
-    let content = fs::read_to_string(&expanded_path).expect("Failed to read config file");
-    let shortcuts: HashMap<String, String> = serde_json::from_str(&content).unwrap_or_default();
+    let shortcuts = load_shortcuts(path);
 
     // todo invert if
     if let Some(command_str) = shortcuts.get(key) {
