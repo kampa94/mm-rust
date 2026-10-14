@@ -313,3 +313,97 @@ fn validate_alias_rejects_reserved_and_empty() {
     assert!(validate_alias("   ").is_err());
     assert!(validate_alias("build").is_ok());
 }
+
+#[test]
+fn execute_shortcut_substitutes_single_placeholder() {
+    let path = temp_path();
+    create_file(&path).unwrap();
+    let mut sink = Vec::new();
+    add_shortcut(&path, "saluto", "echo ciao {{}}, come stai", &mut sink).unwrap();
+
+    let mut out = Vec::new();
+    execute_shortcut(&path, vec!["saluto".to_string(), "pippo".to_string()], &mut out).unwrap();
+    assert_eq!(
+        String::from_utf8(out).unwrap(),
+        "Executing: echo ciao pippo, come stai\n"
+    );
+    cleanup(&path);
+}
+
+#[test]
+fn execute_shortcut_substitutes_multiple_placeholders_in_order() {
+    let path = temp_path();
+    create_file(&path).unwrap();
+    let mut sink = Vec::new();
+    add_shortcut(&path, "pair", "echo {{}} and {{}}", &mut sink).unwrap();
+
+    let mut out = Vec::new();
+    execute_shortcut(
+        &path,
+        vec!["pair".to_string(), "a".to_string(), "b".to_string()],
+        &mut out,
+    )
+    .unwrap();
+    assert_eq!(String::from_utf8(out).unwrap(), "Executing: echo a and b\n");
+    cleanup(&path);
+}
+
+#[test]
+fn execute_shortcut_appends_extra_args_without_placeholders() {
+    let path = temp_path();
+    create_file(&path).unwrap();
+    let mut sink = Vec::new();
+    add_shortcut(&path, "hi", "echo hi", &mut sink).unwrap();
+
+    let mut out = Vec::new();
+    execute_shortcut(
+        &path,
+        vec!["hi".to_string(), "a".to_string(), "b".to_string()],
+        &mut out,
+    )
+    .unwrap();
+    assert_eq!(String::from_utf8(out).unwrap(), "Executing: echo hi a b\n");
+    cleanup(&path);
+}
+
+#[test]
+fn execute_shortcut_escapes_args_with_spaces() {
+    let path = temp_path();
+    create_file(&path).unwrap();
+    let mut sink = Vec::new();
+    add_shortcut(&path, "say", "echo {{}}", &mut sink).unwrap();
+
+    let mut out = Vec::new();
+    execute_shortcut(
+        &path,
+        vec!["say".to_string(), "hello world".to_string()],
+        &mut out,
+    )
+    .unwrap();
+    assert_eq!(
+        String::from_utf8(out).unwrap(),
+        "Executing: echo 'hello world'\n"
+    );
+    cleanup(&path);
+}
+
+#[test]
+fn execute_shortcut_leaves_placeholder_when_arg_missing() {
+    let path = temp_path();
+    create_file(&path).unwrap();
+    let mut sink = Vec::new();
+    add_shortcut(&path, "pair", "echo {{}} and {{}}", &mut sink).unwrap();
+
+    let mut out = Vec::new();
+    execute_shortcut(&path, vec!["pair".to_string(), "only".to_string()], &mut out).unwrap();
+    let text = String::from_utf8(out).unwrap();
+    assert!(
+        text.contains("Executing: echo only and {{}}"),
+        "unexpected output: {text}"
+    );
+    assert!(
+        text.contains("Warning: 1 placeholder(s) without argument"),
+        "unexpected output: {text}"
+    );
+    cleanup(&path);
+}
